@@ -1,0 +1,8 @@
+# 機密情報ファイル
+config.php
+
+# キャッシュファイル
+lib/exec_chromedriver/cache/*.html
+
+# 一時ファイル
+tmp/
