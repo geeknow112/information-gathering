@@ -1,0 +1,7 @@
+<?php
+          $serverInfo = array(
+		'software' => 'bitnami',
+		'password' => 'YOUR_PASSWORD_HERE',
+		'domain' => 'example.com',
+          );
+?>
