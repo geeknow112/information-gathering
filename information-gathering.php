@@ -7,12 +7,8 @@ function submit_search() {
         document.order_export.submit();
 }
 </script>
-<?php
-include_once 'config.php';
-$domain = $serverInfo['domain'];
-?>
-<script src="https://<?php echo $domain; ?>/wp-content/plugins/order-export/js/jquery.min.js"></script>
-<script src="https://<?php echo $domain; ?>/wp-content/plugins/order-export/js/encoding.min.js"></script>
+<script src="https://lober-env-imp.work/wp-content/plugins/order-export/js/jquery.min.js"></script>
+<script src="https://lober-env-imp.work/wp-content/plugins/order-export/js/encoding.min.js"></script>
 <script>
 const csvDownload = function(data, filename) {
 //console.log(data);
