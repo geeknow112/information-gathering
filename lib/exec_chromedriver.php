@@ -37,21 +37,23 @@ function getCowData($idNumbers) {
 			}
 			$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
 
+			// 繁殖生産者: "市町村_____名前" → explodeで空要素が出るので、空でない要素を取得
+			$hanshoku_city = "";
+			$hanshoku_name = "";
 			if (!empty($arr['values'][5])) {
-				$hanshoku = explode('_', $arr['values'][5]);
-			} else {
-				$hanshoku = array("", "", "");
+				$parts = array_values(array_filter(explode('_', $arr['values'][5]), 'strlen'));
+				$hanshoku_city = isset($parts[0]) ? $parts[0] : "";
+				$hanshoku_name = isset($parts[1]) ? $parts[1] : "";
 			}
-			$hanshoku_city = $hanshoku[0];
-			$hanshoku_name = isset($hanshoku[2]) ? $hanshoku[2] : "";
 
+			// 肥育者: 同様の処理
+			$hiiku_city = "";
+			$hiiku_name = "";
 			if (!empty($arr['values'][6])) {
-				$hiiku = explode('_', $arr['values'][6]);
-			} else {
-				$hiiku = array("", "", "");
+				$parts = array_values(array_filter(explode('_', $arr['values'][6]), 'strlen'));
+				$hiiku_city = isset($parts[0]) ? $parts[0] : "";
+				$hiiku_name = isset($parts[1]) ? $parts[1] : "";
 			}
-			$hiiku_city = $hiiku[0];
-			$hiiku_name = isset($hiiku[2]) ? $hiiku[2] : "";
 
 			$csvAr = array(
 				$hanshoku_city, // 市町村
@@ -104,10 +106,8 @@ function setArray($array_name, $output) {
 		}
 
 		if (!empty($out)) {
-			// &nbsp;&nbsp; または &nbsp&nbsp のパターンを _ に置換
-			$ret = preg_replace('/(&nbsp;?\s*){2,}/', '_', $out[1]);
-			// 残った単独の &nbsp; or &nbsp を除去
-			$ret = preg_replace('/&nbsp;?/', '', $ret);
+			// 各 &nbsp; or &nbsp を個別に _ に置換（explodeで分割するため）
+			$ret = preg_replace('/&nbsp;?/', '_', $out[1]);
 			if(!empty($ret)) {
 				$arr[] = $ret;
 			}
@@ -139,20 +139,24 @@ function checkValues($cache_file = null) {
 	}
 	$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
 
+	// 繁殖生産者チェック
+	$hanshoku_city = "";
+	$hanshoku_name = "";
 	if (!empty($arr['values'][5])) {
-		$hanshoku = explode('_', $arr['values'][5]);
-	} else {
-		$hanshoku = array("", "", "");
+		$parts = array_values(array_filter(explode('_', $arr['values'][5]), 'strlen'));
+		$hanshoku_city = isset($parts[0]) ? $parts[0] : "";
+		$hanshoku_name = isset($parts[1]) ? $parts[1] : "";
 	}
 
+	// 肥育者チェック
+	$hiiku_name = "";
 	if (!empty($arr['values'][6])) {
-		$hiiku = explode('_', $arr['values'][6]);
-	} else {
-		$hiiku = array("", "", "");
+		$parts = array_values(array_filter(explode('_', $arr['values'][6]), 'strlen'));
+		$hiiku_name = isset($parts[1]) ? $parts[1] : "";
 	}
 
 	// 主要な情報がない場合、falseを返す
-	if (empty($hanshoku[0]) || empty(isset($hanshoku[2]) ? $hanshoku[2] : '') || empty(isset($hiiku[2]) ? $hiiku[2] : '')) {
+	if (empty($hanshoku_city) || empty($hanshoku_name) || empty($hiiku_name)) {
 		return false;
 	}
 	return true;
