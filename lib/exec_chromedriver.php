@@ -106,13 +106,16 @@ function setArray($array_name, $output) {
 
 		if (!empty($out)) {
 			if ($array_name === 'values') {
-				// values: &nbsp(セミコロンなし連続)を _ に置換して後でexplodeで分割
+				// values: &nbsp(セミコロンあり/なし)を _ に置換して後でexplodeで分割
 				$ret = preg_replace('/&nbsp;?/', '_', $out[1]);
+				// _のみの文字列（spacer等）は除外
+				$ret = trim($ret, '_');
+				$ret = trim($ret);
 			} else {
 				// charts等: &nbsp; を単純に除去
 				$ret = preg_replace('/&nbsp;?/', '', $out[1]);
+				$ret = trim($ret);
 			}
-			$ret = trim($ret);
 			if(!empty($ret)) {
 				$arr[] = $ret;
 			}
