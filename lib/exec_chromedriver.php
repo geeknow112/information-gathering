@@ -1,21 +1,20 @@
 <?php
 function getCowData($idNumbers) {
 	if ($idNumbers) {
-		//$idNumber = $idNumbers[0];
+		$csvs = array();
+		$csvsAr = array();
 		foreach ($idNumbers as $i => $idNumber) {
 			if (empty($idNumber)) { continue; }
-			//元サイトへの負荷を考慮して、取得htmlをcacheする。ファイルがない|ファイル日付が1ヶ月以上経過の場合、取得処理をする。|主要な情報がない場合、再取得
+			$idNumber = trim($idNumber);
+			// 元サイトへの負荷を考慮して、取得htmlをcacheする。
+			// ファイルがない|ファイル日付が1ヶ月以上経過の場合|主要な情報がない場合、再取得
 			$cache_file = dirname(__DIR__). '/lib/exec_chromedriver/cache/'. $idNumber. '.html';
 			if (!file_exists($cache_file) || (filectime($cache_file) > strtotime('+1 month')) || (filesize($cache_file) <= 0) || (checkValues($cache_file) == false)) {
 				echo '+1 month data gathering process...<br>';
 				touch($cache_file);
 				$execFile = dirname(__DIR__). '/lib/exec_chromedriver/tajima_cow.py';
-//				$execFile = dirname(__DIR__). '/lib/exec_chromedriver/test.py';
-//				$execCmd = sprintf("echo '%s' | sudo -S python3 %s %s", getPwForWebServer(), $execFile, $idNumber);
-				$execCmd = sprintf("python3 %s %s", $execFile, $idNumber);
-//				$execCmd = sprintf("python3 /home/bitnami/stack/wordpress/wp-content/plugins/information-gathering/lib/exec_chromedriver/test.py %s", $idNumber);
+				$execCmd = sprintf("python3 %s %s 2>&1", $execFile, escapeshellarg($idNumber));
 				echo shell_exec($execCmd);
-//var_dump(shell_exec($execCmd));exit;
 				sleep(1);
 				$cache_data = file_get_contents($cache_file);
 				$r_contents = $cache_data;
@@ -29,7 +28,6 @@ function getCowData($idNumbers) {
 			$arr['label_charts'] = setArray('label_charts', $output);
 			$arr['charts'] = setArray('charts', $output);
 
-			//dumpArray($arr);
 			$html = "";
 			$html .= $r_contents;
 
@@ -38,7 +36,6 @@ function getCowData($idNumbers) {
 				preg_match('/(.*)Steer/', $html, $sex);
 			}
 			$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
-			//var_dump($sex);
 
 			if (!empty($arr['values'][5])) {
 				$hanshoku = explode('_', $arr['values'][5]);
@@ -46,7 +43,7 @@ function getCowData($idNumbers) {
 				$hanshoku = array("", "", "");
 			}
 			$hanshoku_city = $hanshoku[0];
-			$hanshoku_name = $hanshoku[2];
+			$hanshoku_name = isset($hanshoku[2]) ? $hanshoku[2] : "";
 
 			if (!empty($arr['values'][6])) {
 				$hiiku = explode('_', $arr['values'][6]);
@@ -54,24 +51,24 @@ function getCowData($idNumbers) {
 				$hiiku = array("", "", "");
 			}
 			$hiiku_city = $hiiku[0];
-			$hiiku_name = $hiiku[2];
+			$hiiku_name = isset($hiiku[2]) ? $hiiku[2] : "";
 
 			$csvAr = array(
 				$hanshoku_city, // 市町村
 				'', //
 				$hanshoku_name, // 繁殖生産者
-				$arr['charts'][7], // 繁殖母牛名
-				$arr['charts'][5], // 祖父種
-				$arr['charts'][8], // 祖母名
-				$arr['charts'][2], // 父種
-				$arr['values'][3], // 生年月日
+				isset($arr['charts'][7]) ? $arr['charts'][7] : '', // 繁殖母牛名
+				isset($arr['charts'][5]) ? $arr['charts'][5] : '', // 祖父種
+				isset($arr['charts'][8]) ? $arr['charts'][8] : '', // 祖母名
+				isset($arr['charts'][2]) ? $arr['charts'][2] : '', // 父種
+				isset($arr['values'][3]) ? $arr['values'][3] : '', // 生年月日
 				$sex, // 性別
-				$arr['values'][4],// 上場日
+				isset($arr['values'][4]) ? $arr['values'][4] : '', // 上場日
 				'', // 格　付
 				'', // 枝肉重量
 				'', // 単　価
 				$hiiku_name, // 肥育者名
-				$arr['values'][0],// 個体識別番号
+				isset($arr['values'][0]) ? $arr['values'][0] : '', // 個体識別番号
 			);
 
 			$csvs[] = implode(',', $csvAr);
@@ -82,13 +79,13 @@ function getCowData($idNumbers) {
 }
 
 /**
- * 
- * 
+ * HTMLの行を正規表現でパースして配列にセット
  **/
 function setArray($array_name, $output) {
+	$arr = array();
 	foreach ($output as $i => $d) {
-	$d = preg_replace('/\t/', '', $d);
-//var_dump($d);
+		$d = preg_replace('/\t/', '', $d);
+		$out = array();
 		switch ($array_name) {
 			case 'labels':
 				preg_match('/<td class="label">(.+)<\/td>/', $d, $out);
@@ -108,7 +105,6 @@ function setArray($array_name, $output) {
 		if (!empty($out)) {
 			$ret = preg_replace('/&nbsp;&nbsp;/', '_', $out[1]);
 			$ret = preg_replace('/&nbsp;/', '', $ret);
-
 			if(!empty($ret)) {
 				$arr[] = $ret;
 			}
@@ -118,76 +114,19 @@ function setArray($array_name, $output) {
 }
 
 /**
- * 
- * 
- **/
-function getPwForWebServer() {
-	include(dirname(__DIR__). '/config.php');
-//		var_dump($serverInfo);
-	return (!empty($serverInfo['password'])) ? $serverInfo['password'] : null;
-}
-
-/**
- * 
- * 
- **/
-function dumpArray($arr) {
-	echo '<pre>';
-	var_dump($arr['labels']);
-	echo '</pre><br>';
-	echo '<pre>';
-	var_dump($arr['values']);
-	echo '</pre><br>';
-	echo '<pre>';
-	var_dump($arr['label_charts']);
-	echo '</pre><br>';
-	echo '<pre>';
-	var_dump($arr['charts']);
-	echo '</pre><br>';
-}
-
-/**
- * 
- * 
+ * キャッシュデータの主要情報チェック
  **/
 function checkValues($cache_file = null) {
 	$c_data = file_get_contents($cache_file);
+	if (empty($c_data)) { return false; }
 	$r_contents = $c_data;
-	$arr = setArrayProcess($r_contents);
 
-	$sex = getValuleSex($r_contents);
-	$hanshoku = getValueHanshoku($r_contents, $arr);
-	$hiiku = getValueHiiku($r_contents, $arr);
-
-	$csvAr = setCsvAr($sex, $hanshoku, $hiiku);
-//	var_dump($csvAr);
-
-	// 下記、主要な情報がない場合、falseを返す
-	//   [0]:市町村、[2]:繁殖生産者、[13]:肥育者名
-	if (empty($csvAr[0]) || empty($csvAr[2]) || empty($csvAr[13])) {
-		return false;
-	}
-	return true;
-}
-
-/**
- * 取得した情報を配列にセット
- * 
- **/
-function setArrayProcess($r_contents = null) {
 	$output = explode("\n", $r_contents, -1);
 	$arr['labels'] = setArray('labels', $output);
 	$arr['values'] = setArray('values', $output);
 	$arr['label_charts'] = setArray('label_charts', $output);
 	$arr['charts'] = setArray('charts', $output);
-	return $arr;
-}
 
-/**
- * キャッシュデータから情報を取得:「性別」
- * 
- **/
-function getValuleSex($r_contents = null) {
 	$html = "";
 	$html .= $r_contents;
 
@@ -196,71 +135,23 @@ function getValuleSex($r_contents = null) {
 		preg_match('/(.*)Steer/', $html, $sex);
 	}
 	$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
-	return $sex;
-}
-
-/**
- * キャッシュデータから情報を取得:「繁殖者」
- * 
- **/
-function getValueHanshoku($r_contents = null, $arr = null) {
-	$html = "";
-	$html .= $r_contents;
 
 	if (!empty($arr['values'][5])) {
 		$hanshoku = explode('_', $arr['values'][5]);
 	} else {
 		$hanshoku = array("", "", "");
 	}
-	return $hanshoku;
-}
-
-/**
- * キャッシュデータから情報を取得:「肥育者」
- * 
- **/
-function getValueHiiku($r_contents = null, $arr = null) {
-	$html = "";
-	$html .= $r_contents;
 
 	if (!empty($arr['values'][6])) {
 		$hiiku = explode('_', $arr['values'][6]);
 	} else {
 		$hiiku = array("", "", "");
 	}
-	return $hiiku;
-}
 
-/**
- * CSVへ整形するため配列へセットする
- * 
- **/
-function setCsvAr($sex = null, $hanshoku = null, $hiiku = null) {
-
-	$hanshoku_city = $hanshoku[0];
-	$hanshoku_name = $hanshoku[2];
-
-	$hiiku_city = $hiiku[0];
-	$hiiku_name = $hiiku[2];
-
-	$csvAr = array(
-		$hanshoku_city, // 市町村
-		'', //
-		$hanshoku_name, // 繁殖生産者
-		$arr['charts'][7], // 繁殖母牛名
-		$arr['charts'][5], // 祖父種
-		$arr['charts'][8], // 祖母名
-		$arr['charts'][2], // 父種
-		$arr['values'][3], // 生年月日
-		$sex, // 性別
-		$arr['values'][4],// 上場日
-		'', // 格　付
-		'', // 枝肉重量
-		'', // 単　価
-		$hiiku_name, // 肥育者名
-		$arr['values'][0],// 個体識別番号
-	);
-
-	return $csvAr;
+	// 主要な情報がない場合、falseを返す
+	if (empty($hanshoku[0]) || empty(isset($hanshoku[2]) ? $hanshoku[2] : '') || empty(isset($hiiku[2]) ? $hiiku[2] : '')) {
+		return false;
+	}
+	return true;
 }
 ?>
