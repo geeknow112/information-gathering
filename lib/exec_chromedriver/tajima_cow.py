@@ -1,5 +1,5 @@
-# tajima cow 検索をする（requests + BeautifulSoup版）
-# Selenium/ChromeDriverを使わず、HTTPリクエストで直接HTMLを取得する
+# tajima cow 検索をする（requests版）
+# HTTPリクエストで直接HTMLを取得する
 
 import sys
 import os
@@ -7,7 +7,6 @@ import requests
 
 def main():
     if len(sys.argv) < 2:
-        print("Usage: python3 tajima_cow.py <id_number>")
         sys.exit(1)
 
     id_number = sys.argv[1]
@@ -36,14 +35,11 @@ def main():
         response.encoding = 'euc-jp'
         html_content = response.text
     except requests.exceptions.RequestException as e:
-        print("Error: " + str(e))
         sys.exit(1)
 
     # HTMLをcacheファイルに保存（既存PHPのパース処理と互換性維持）
     with open(cache_file, mode='w', encoding='utf-8') as f:
         f.write(html_content)
-
-    print("OK: " + id_number)
 
 if __name__ == '__main__':
     main()
