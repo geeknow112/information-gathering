@@ -35,7 +35,7 @@ function getCowData($idNumbers) {
 			if (empty($sex)) {
 				preg_match('/(.*)Steer/', $html, $sex);
 			}
-			$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
+			$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
 
 			if (!empty($arr['values'][5])) {
 				$hanshoku = explode('_', $arr['values'][5]);
@@ -80,6 +80,7 @@ function getCowData($idNumbers) {
 
 /**
  * HTMLの行を正規表現でパースして配列にセット
+ * &nbsp と &nbsp; の両方に対応（元サイトがセミコロンなしの場合あり）
  **/
 function setArray($array_name, $output) {
 	$arr = array();
@@ -103,8 +104,10 @@ function setArray($array_name, $output) {
 		}
 
 		if (!empty($out)) {
-			$ret = preg_replace('/&nbsp;&nbsp;/', '_', $out[1]);
-			$ret = preg_replace('/&nbsp;/', '', $ret);
+			// &nbsp;&nbsp; または &nbsp&nbsp のパターンを _ に置換
+			$ret = preg_replace('/(&nbsp;?\s*){2,}/', '_', $out[1]);
+			// 残った単独の &nbsp; or &nbsp を除去
+			$ret = preg_replace('/&nbsp;?/', '', $ret);
 			if(!empty($ret)) {
 				$arr[] = $ret;
 			}
@@ -134,7 +137,7 @@ function checkValues($cache_file = null) {
 	if (empty($sex)) {
 		preg_match('/(.*)Steer/', $html, $sex);
 	}
-	$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
+	$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
 
 	if (!empty($arr['values'][5])) {
 		$hanshoku = explode('_', $arr['values'][5]);
