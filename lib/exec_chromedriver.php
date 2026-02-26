@@ -37,7 +37,7 @@ function getCowData($idNumbers) {
 			}
 			$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
 
-			// 繁殖生産者: "市町村_____名前" → explodeで空要素が出るので、空でない要素を取得
+			// 繁殖生産者: "市町村_____名前" → 空要素を除去して取得
 			$hanshoku_city = "";
 			$hanshoku_name = "";
 			if (!empty($arr['values'][5])) {
@@ -82,7 +82,6 @@ function getCowData($idNumbers) {
 
 /**
  * HTMLの行を正規表現でパースして配列にセット
- * &nbsp と &nbsp; の両方に対応（元サイトがセミコロンなしの場合あり）
  **/
 function setArray($array_name, $output) {
 	$arr = array();
@@ -106,8 +105,14 @@ function setArray($array_name, $output) {
 		}
 
 		if (!empty($out)) {
-			// 各 &nbsp; or &nbsp を個別に _ に置換（explodeで分割するため）
-			$ret = preg_replace('/&nbsp;?/', '_', $out[1]);
+			if ($array_name === 'values') {
+				// values: &nbsp(セミコロンなし連続)を _ に置換して後でexplodeで分割
+				$ret = preg_replace('/&nbsp;?/', '_', $out[1]);
+			} else {
+				// charts等: &nbsp; を単純に除去
+				$ret = preg_replace('/&nbsp;?/', '', $out[1]);
+			}
+			$ret = trim($ret);
 			if(!empty($ret)) {
 				$arr[] = $ret;
 			}
