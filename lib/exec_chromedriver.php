@@ -1,4 +1,8 @@
 <?php
+/**
+ * 但馬牛血統証明システムから情報を取得し、CSV用配列に整形する
+ * Python依存なし、PHPのみで完結
+ **/
 function getCowData($idNumbers) {
 	if ($idNumbers) {
 		$csvs = array();
@@ -11,13 +15,9 @@ function getCowData($idNumbers) {
 			$cache_file = dirname(__DIR__). '/lib/exec_chromedriver/cache/'. $idNumber. '.html';
 			if (!file_exists($cache_file) || (filectime($cache_file) > strtotime('+1 month')) || (filesize($cache_file) <= 0) || (checkValues($cache_file) == false)) {
 				echo '+1 month data gathering process...<br>';
-				touch($cache_file);
-				$execFile = dirname(__DIR__). '/lib/exec_chromedriver/tajima_cow.py';
-				$execCmd = sprintf("python3 %s %s 2>&1", $execFile, escapeshellarg($idNumber));
-				echo shell_exec($execCmd);
+				fetchAndCache($idNumber, $cache_file);
 				sleep(1);
-				$cache_data = file_get_contents($cache_file);
-				$r_contents = $cache_data;
+				$r_contents = file_get_contents($cache_file);
 			} else {
 				$r_contents = file_get_contents($cache_file);
 			}
@@ -78,6 +78,44 @@ function getCowData($idNumbers) {
 		}
 		return array('csvs' => $csvs, 'csvsAr' => $csvsAr);
 	}
+}
+
+/**
+ * 対象サイトにPOSTリクエストを送信し、取得したHTMLをcacheファイルに保存
+ **/
+function fetchAndCache($idNumber, $cache_file) {
+	$url = 'http://www.tajimagyu-trace.com/trace_back.php';
+	$post_data = array(
+		'__EVENTTARGET' => 'submit_search',
+		'__EVENTARGUMENT' => '',
+		'id_number' => $idNumber,
+		'trc_agreement' => '',
+	);
+
+	$context = stream_context_create(array(
+		'http' => array(
+			'method' => 'POST',
+			'header' => 'Content-Type: application/x-www-form-urlencoded',
+			'content' => http_build_query($post_data),
+			'timeout' => 30,
+		),
+	));
+
+	$response = @file_get_contents($url, false, $context);
+	if ($response === false) {
+		return;
+	}
+
+	// euc-jp → UTF-8 変換
+	$html = mb_convert_encoding($response, 'UTF-8', 'EUC-JP');
+
+	// cacheディレクトリがなければ作成
+	$cache_dir = dirname($cache_file);
+	if (!is_dir($cache_dir)) {
+		mkdir($cache_dir, 0755, true);
+	}
+
+	file_put_contents($cache_file, $html);
 }
 
 /**
