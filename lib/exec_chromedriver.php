@@ -106,8 +106,8 @@ function fetchAndCache($idNumber, $cache_file) {
 		return;
 	}
 
-	// euc-jp → UTF-8 変換
-	$html = mb_convert_encoding($response, 'UTF-8', 'EUC-JP');
+	// euc-jp → UTF-8 変換（eucJP-win で㈱等のNEC特殊文字に対応）
+	$html = mb_convert_encoding($response, 'UTF-8', 'eucJP-win');
 
 	// cacheディレクトリがなければ作成
 	$cache_dir = dirname($cache_file);
