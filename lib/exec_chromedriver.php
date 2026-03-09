@@ -144,11 +144,12 @@ function setArray($array_name, $output) {
 
 		if (!empty($out)) {
 			if ($array_name === 'values') {
-				// values: 2段階で&nbsp;を処理（SVN版の仕様を踏襲）
-				// ※ 意図: 連続する&nbsp;はセパレータ（市町村と名前の区切り等）なので _ に変換
-				//          単独の&nbsp;は単なるスペーサーなので除去
-				// Stage1: 2個以上連続する &nbsp;? → _ 1つ（セパレータとして使用）
-				$ret = preg_replace('/(&nbsp;?){2,}/', '_', $out[1]);
+				// values: 2段階で&nbsp;を処理（SVN版の仕様を忠実に踏襲）
+				// ※ SVN版の挙動:
+				//   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → Stage1で2個ペアずつ_に変換 → __&nbsp; → Stage2で残り除去 → __
+				//   つまり「2個ペア」の数だけ _ が生成される
+				// Stage1: &nbsp;? 2個ペアを _ 1つに変換（繰り返しマッチで複数ペア→複数_）
+				$ret = preg_replace('/&nbsp;?&nbsp;?/', '_', $out[1]);
 				// Stage2: 残った単独の &nbsp;? → 除去（単なるスペーサー）
 				$ret = preg_replace('/&nbsp;?/', '', $ret);
 				$ret = trim($ret, '_');
