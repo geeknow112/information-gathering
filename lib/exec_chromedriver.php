@@ -35,24 +35,24 @@ function getCowData($idNumbers) {
 			if (empty($sex)) {
 				preg_match('/(.*)Steer/', $html, $sex);
 			}
-			$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
+			$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
 
-			// 繁殖生産者: "市町村_____名前" → 空要素を除去して取得
+			// 繁殖生産者: SVN版と同じくexplodeで分割し[0]=市町村、[2]=名前
 			$hanshoku_city = "";
 			$hanshoku_name = "";
 			if (!empty($arr['values'][5])) {
-				$parts = array_values(array_filter(explode('_', $arr['values'][5]), 'strlen'));
-				$hanshoku_city = isset($parts[0]) ? $parts[0] : "";
-				$hanshoku_name = isset($parts[1]) ? $parts[1] : "";
+				$hanshoku = explode('_', $arr['values'][5]);
+				$hanshoku_city = isset($hanshoku[0]) ? $hanshoku[0] : "";
+				$hanshoku_name = isset($hanshoku[2]) ? $hanshoku[2] : "";
 			}
 
-			// 肥育者: 同様の処理
+			// 肥育者: 同様
 			$hiiku_city = "";
 			$hiiku_name = "";
 			if (!empty($arr['values'][6])) {
-				$parts = array_values(array_filter(explode('_', $arr['values'][6]), 'strlen'));
-				$hiiku_city = isset($parts[0]) ? $parts[0] : "";
-				$hiiku_name = isset($parts[1]) ? $parts[1] : "";
+				$hiiku = explode('_', $arr['values'][6]);
+				$hiiku_city = isset($hiiku[0]) ? $hiiku[0] : "";
+				$hiiku_name = isset($hiiku[2]) ? $hiiku[2] : "";
 			}
 
 			$csvAr = array(
@@ -143,22 +143,12 @@ function setArray($array_name, $output) {
 		}
 
 		if (!empty($out)) {
-			if ($array_name === 'values') {
-				// values: 2段階で&nbsp;を処理（SVN版の仕様を忠実に踏襲）
-				// ※ SVN版の挙動:
-				//   &nbsp;&nbsp;&nbsp;&nbsp;&nbsp; → Stage1で2個ペアずつ_に変換 → __&nbsp; → Stage2で残り除去 → __
-				//   つまり「2個ペア」の数だけ _ が生成される
-				// Stage1: &nbsp;? 2個ペアを _ 1つに変換（繰り返しマッチで複数ペア→複数_）
-				$ret = preg_replace('/&nbsp;?&nbsp;?/', '_', $out[1]);
-				// Stage2: 残った単独の &nbsp;? → 除去（単なるスペーサー）
-				$ret = preg_replace('/&nbsp;?/', '', $ret);
-				$ret = trim($ret, '_');
-				$ret = trim($ret);
-			} else {
-				// charts等: &nbsp;? を単純に除去
-				$ret = preg_replace('/&nbsp;?/', '', $out[1]);
-				$ret = trim($ret);
-			}
+			// SVN版と同一の2段階処理（全array_name共通）
+			// Stage1: &nbsp;&nbsp; (2個連続) → _ に変換（セパレータ用途）
+			$ret = preg_replace('/&nbsp;&nbsp;/', '_', $out[1]);
+			// Stage2: 残った単独の &nbsp; → 除去（スペーサー用途）
+			$ret = preg_replace('/&nbsp;/', '', $ret);
+
 			if(!empty($ret)) {
 				$arr[] = $ret;
 			}
@@ -188,22 +178,22 @@ function checkValues($cache_file = null) {
 	if (empty($sex)) {
 		preg_match('/(.*)Steer/', $html, $sex);
 	}
-	$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
+	$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
 
 	// 繁殖生産者チェック
 	$hanshoku_city = "";
 	$hanshoku_name = "";
 	if (!empty($arr['values'][5])) {
-		$parts = array_values(array_filter(explode('_', $arr['values'][5]), 'strlen'));
-		$hanshoku_city = isset($parts[0]) ? $parts[0] : "";
-		$hanshoku_name = isset($parts[1]) ? $parts[1] : "";
+		$hanshoku = explode('_', $arr['values'][5]);
+		$hanshoku_city = isset($hanshoku[0]) ? $hanshoku[0] : "";
+		$hanshoku_name = isset($hanshoku[2]) ? $hanshoku[2] : "";
 	}
 
 	// 肥育者チェック
 	$hiiku_name = "";
 	if (!empty($arr['values'][6])) {
-		$parts = array_values(array_filter(explode('_', $arr['values'][6]), 'strlen'));
-		$hiiku_name = isset($parts[1]) ? $parts[1] : "";
+		$hiiku = explode('_', $arr['values'][6]);
+		$hiiku_name = isset($hiiku[2]) ? $hiiku[2] : "";
 	}
 
 	// 主要な情報がない場合、falseを返す
