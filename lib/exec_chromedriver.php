@@ -1,17 +1,14 @@
 <?php
 /**
  * 但馬牛血統証明システムから情報を取得し、CSV用配列に整形する
- * Python依存なし、PHPのみで完結
+ * ※ データ整形ロジックはSVN版と完全同一。データ取得のみPHP化（Python依存なし）
  **/
 function getCowData($idNumbers) {
 	if ($idNumbers) {
-		$csvs = array();
-		$csvsAr = array();
 		foreach ($idNumbers as $i => $idNumber) {
 			if (empty($idNumber)) { continue; }
 			$idNumber = trim($idNumber);
-			// 元サイトへの負荷を考慮して、取得htmlをcacheする。
-			// ファイルがない|ファイル日付が1ヶ月以上経過の場合|主要な情報がない場合、再取得
+			// 元サイトへの負荷を考慮して、取得htmlをcacheする。ファイルがない|ファイル日付が1ヶ月以上経過の場合、取得処理をする。|主要な情報がない場合、再取得
 			$cache_file = dirname(__DIR__). '/lib/exec_chromedriver/cache/'. $idNumber. '.html';
 			if (!file_exists($cache_file) || (filectime($cache_file) > strtotime('+1 month')) || (filesize($cache_file) <= 0) || (checkValues($cache_file) == false)) {
 				echo '+1 month data gathering process...<br>';
@@ -37,40 +34,38 @@ function getCowData($idNumbers) {
 			}
 			$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
 
-			// 繁殖生産者: SVN版と同じくexplodeで分割し[0]=市町村、[2]=名前
-			$hanshoku_city = "";
-			$hanshoku_name = "";
 			if (!empty($arr['values'][5])) {
 				$hanshoku = explode('_', $arr['values'][5]);
-				$hanshoku_city = isset($hanshoku[0]) ? $hanshoku[0] : "";
-				$hanshoku_name = isset($hanshoku[2]) ? $hanshoku[2] : "";
+			} else {
+				$hanshoku = array("", "", "");
 			}
+			$hanshoku_city = $hanshoku[0];
+			$hanshoku_name = $hanshoku[2];
 
-			// 肥育者: 同様
-			$hiiku_city = "";
-			$hiiku_name = "";
 			if (!empty($arr['values'][6])) {
 				$hiiku = explode('_', $arr['values'][6]);
-				$hiiku_city = isset($hiiku[0]) ? $hiiku[0] : "";
-				$hiiku_name = isset($hiiku[2]) ? $hiiku[2] : "";
+			} else {
+				$hiiku = array("", "", "");
 			}
+			$hiiku_city = $hiiku[0];
+			$hiiku_name = $hiiku[2];
 
 			$csvAr = array(
 				$hanshoku_city, // 市町村
 				'', //
 				$hanshoku_name, // 繁殖生産者
-				isset($arr['charts'][7]) ? $arr['charts'][7] : '', // 繁殖母牛名
-				isset($arr['charts'][5]) ? $arr['charts'][5] : '', // 祖父種
-				isset($arr['charts'][8]) ? $arr['charts'][8] : '', // 祖母名
-				isset($arr['charts'][2]) ? $arr['charts'][2] : '', // 父種
-				isset($arr['values'][3]) ? $arr['values'][3] : '', // 生年月日
+				$arr['charts'][7], // 繁殖母牛名
+				$arr['charts'][5], // 祖父種
+				$arr['charts'][8], // 祖母名
+				$arr['charts'][2], // 父種
+				$arr['values'][3], // 生年月日
 				$sex, // 性別
-				isset($arr['values'][4]) ? $arr['values'][4] : '', // 上場日
+				$arr['values'][4],// 上場日
 				'', // 格　付
 				'', // 枝肉重量
 				'', // 単　価
 				$hiiku_name, // 肥育者名
-				isset($arr['values'][0]) ? $arr['values'][0] : '', // 個体識別番号
+				$arr['values'][0],// 個体識別番号
 			);
 
 			$csvs[] = implode(',', $csvAr);
@@ -82,6 +77,7 @@ function getCowData($idNumbers) {
 
 /**
  * 対象サイトにPOSTリクエストを送信し、取得したHTMLをcacheファイルに保存
+ * ※ SVN版ではPython(Selenium)で取得していた部分をPHPに置き換え
  **/
 function fetchAndCache($idNumber, $cache_file) {
 	$url = 'http://www.tajimagyu-trace.com/trace_back.php';
@@ -120,12 +116,11 @@ function fetchAndCache($idNumber, $cache_file) {
 
 /**
  * HTMLの行を正規表現でパースして配列にセット
+ * ※ SVN版と完全同一のロジック
  **/
 function setArray($array_name, $output) {
-	$arr = array();
 	foreach ($output as $i => $d) {
-		$d = preg_replace('/\t/', '', $d);
-		$out = array();
+	$d = preg_replace('/\t/', '', $d);
 		switch ($array_name) {
 			case 'labels':
 				preg_match('/<td class="label">(.+)<\/td>/', $d, $out);
@@ -143,10 +138,7 @@ function setArray($array_name, $output) {
 		}
 
 		if (!empty($out)) {
-			// SVN版と同一の2段階処理（全array_name共通）
-			// Stage1: &nbsp;&nbsp; (2個連続) → _ に変換（セパレータ用途）
 			$ret = preg_replace('/&nbsp;&nbsp;/', '_', $out[1]);
-			// Stage2: 残った単独の &nbsp; → 除去（スペーサー用途）
 			$ret = preg_replace('/&nbsp;/', '', $ret);
 
 			if(!empty($ret)) {
@@ -159,6 +151,7 @@ function setArray($array_name, $output) {
 
 /**
  * キャッシュデータの主要情報チェック
+ * ※ SVN版と同一のロジック（ヘルパー関数を使わずインライン化）
  **/
 function checkValues($cache_file = null) {
 	$c_data = file_get_contents($cache_file);
@@ -180,21 +173,20 @@ function checkValues($cache_file = null) {
 	}
 	$sex = preg_replace('/&nbsp;|\t/', '', $sex[1]);
 
-	// 繁殖生産者チェック
-	$hanshoku_city = "";
-	$hanshoku_name = "";
 	if (!empty($arr['values'][5])) {
 		$hanshoku = explode('_', $arr['values'][5]);
-		$hanshoku_city = isset($hanshoku[0]) ? $hanshoku[0] : "";
-		$hanshoku_name = isset($hanshoku[2]) ? $hanshoku[2] : "";
+	} else {
+		$hanshoku = array("", "", "");
 	}
+	$hanshoku_city = $hanshoku[0];
+	$hanshoku_name = $hanshoku[2];
 
-	// 肥育者チェック
-	$hiiku_name = "";
 	if (!empty($arr['values'][6])) {
 		$hiiku = explode('_', $arr['values'][6]);
-		$hiiku_name = isset($hiiku[2]) ? $hiiku[2] : "";
+	} else {
+		$hiiku = array("", "", "");
 	}
+	$hiiku_name = $hiiku[2];
 
 	// 主要な情報がない場合、falseを返す
 	if (empty($hanshoku_city) || empty($hanshoku_name) || empty($hiiku_name)) {
