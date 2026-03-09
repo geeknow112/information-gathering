@@ -144,13 +144,17 @@ function setArray($array_name, $output) {
 
 		if (!empty($out)) {
 			if ($array_name === 'values') {
-				// values: &nbsp(セミコロンあり/なし)を _ に置換して後でexplodeで分割
-				$ret = preg_replace('/&nbsp;?/', '_', $out[1]);
-				// _のみの文字列（spacer等）は除外
+				// values: 2段階で&nbsp;を処理（SVN版の仕様を踏襲）
+				// ※ 意図: 連続する&nbsp;はセパレータ（市町村と名前の区切り等）なので _ に変換
+				//          単独の&nbsp;は単なるスペーサーなので除去
+				// Stage1: 2個以上連続する &nbsp;? → _ 1つ（セパレータとして使用）
+				$ret = preg_replace('/(&nbsp;?){2,}/', '_', $out[1]);
+				// Stage2: 残った単独の &nbsp;? → 除去（単なるスペーサー）
+				$ret = preg_replace('/&nbsp;?/', '', $ret);
 				$ret = trim($ret, '_');
 				$ret = trim($ret);
 			} else {
-				// charts等: &nbsp; を単純に除去
+				// charts等: &nbsp;? を単純に除去
 				$ret = preg_replace('/&nbsp;?/', '', $out[1]);
 				$ret = trim($ret);
 			}
