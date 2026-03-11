@@ -32,7 +32,8 @@ function getCowData($idNumbers) {
 			if (empty($sex)) {
 				preg_match('/(.*)Steer/', $html, $sex);
 			}
-			$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
+			$sex = preg_replace('/&nbsp(?!;)/', '&nbsp;', $sex[1]);
+			$sex = preg_replace('/&nbsp;|\t/', '', $sex);
 
 			if (!empty($arr['values'][5])) {
 				$hanshoku = explode('_', $arr['values'][5]);
@@ -138,9 +139,11 @@ function setArray($array_name, $output) {
 		}
 
 		if (!empty($out)) {
-			// &nbsp（セミコロンなし）と &nbsp;（セミコロン付き）の両方に対応
-			$ret = preg_replace('/(&nbsp;?){2,}/', '_', $out[1]);
-			$ret = preg_replace('/&nbsp;?/', '', $ret);
+			// &nbsp（セミコロンなし）→ &nbsp;（セミコロン付き）に正規化
+			$normalized = preg_replace('/&nbsp(?!;)/', '&nbsp;', $out[1]);
+			// SVN版と同一の2段階処理
+			$ret = preg_replace('/&nbsp;&nbsp;/', '_', $normalized);
+			$ret = preg_replace('/&nbsp;/', '', $ret);
 
 			if(!empty($ret)) {
 				$arr[] = $ret;
@@ -172,7 +175,8 @@ function checkValues($cache_file = null) {
 	if (empty($sex)) {
 		preg_match('/(.*)Steer/', $html, $sex);
 	}
-	$sex = preg_replace('/&nbsp;?|\t/', '', $sex[1]);
+	$sex = preg_replace('/&nbsp(?!;)/', '&nbsp;', $sex[1]);
+	$sex = preg_replace('/&nbsp;|\t/', '', $sex);
 
 	if (!empty($arr['values'][5])) {
 		$hanshoku = explode('_', $arr['values'][5]);
