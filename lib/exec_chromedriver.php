@@ -41,7 +41,7 @@ function getCowData($idNumbers) {
 				$hanshoku = array("", "", "");
 			}
 			$hanshoku_city = $hanshoku[0];
-			$hanshoku_name = $hanshoku[2];
+			$hanshoku_name = normalizeHanshokuName($hanshoku[2]);
 
 			if (!empty($arr['values'][6])) {
 				$hiiku = explode('_', $arr['values'][6]);
@@ -184,7 +184,7 @@ function checkValues($cache_file = null) {
 		$hanshoku = array("", "", "");
 	}
 	$hanshoku_city = $hanshoku[0];
-	$hanshoku_name = $hanshoku[2];
+	$hanshoku_name = normalizeHanshokuName($hanshoku[2]);
 
 	if (!empty($arr['values'][6])) {
 		$hiiku = explode('_', $arr['values'][6]);
@@ -198,5 +198,14 @@ function checkValues($cache_file = null) {
 		return false;
 	}
 	return true;
+}
+
+/**
+ * 繁殖生産者名の正規化（全角スペース削除、㈱→(株)）
+ **/
+function normalizeHanshokuName($name) {
+	$name = str_replace('　', '', $name);
+	$name = str_replace('㈱', '(株)', $name);
+	return $name;
 }
 ?>
